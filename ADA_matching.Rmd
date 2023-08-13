@@ -1,0 +1,133 @@
+---
+title: "Matching"
+author: "Jessica Guo"
+date: "2023-07-20"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+set.seed(1000)
+library(topicmodels)
+library(dplyr)
+library(NLP)
+library(papeR)
+library(tidytext)
+library(ggplot2)
+library(tm)
+library(tidyr)
+library(wordcloud)
+library(rJava)
+library(randChecks)
+library(stm)
+library(quanteda)
+library(corpus)
+library(quanteda.sentiment)
+library(quanteda.dictionaries)
+library(quanteda.corpora)
+library(quanteda.textstats)
+library(textreg)
+library(MatchIt)
+library(data.table)
+library(cobalt)
+library(designmatch)
+library(cem)
+library(lsa)
+library(SuperLearner)
+library(npcausal)
+library(lmtest)
+library(sandwich)
+```
+
+```{r, matching}
+# see separate R files, requires a lot of RAM space
+full_cb <-abs(getStandardizedCovMeanDiffs(cov_15[,-c(46,61:74)],cov_15$gender))
+mean(full_cb)
+max(full_cb)
+
+# cardinality matching
+cardmatch <- matchit(formula = gender~.-ups-num_comments,
+                      data = cov_15,method = "cardinality",time = 3600,
+                     ratio = 1, tol = 0.01,std.tols = TRUE,solver = "gurobi")
+cobalt::love.plot(cardmatch)
+matched.card = match.data(cardmatch)
+saveRDS(matched.card, file = "matched.card.RDS")
+card_cb <- abs(getStandardizedCovMeanDiffs(matched.card[,-c(46,61:75)],matched.card$gender))
+
+mean(card_cb)
+max(card_cb)
+
+
+```
+
+```{r, cosine distance evaluation}
+# not the most efficient way of doing this
+lasso2_match_red <- matched.lasso2 %>% dplyr::select(X,gender,subclass)
+lasso2_match_red <-lasso2_match_red[order(lasso2_match_red$subclass,decreasing = F),]
+lasso2_red_f<-lasso2_match_red %>% filter(gender == 1)
+lasso2_red_f <-lasso2_red_f[order(lasso2_red_f$subclass,decreasing = F),]
+lasso2_red_m <-lasso2_match_red %>% filter(gender == 0)
+lasso2_red_m <-lasso2_red_m[order(lasso2_red_m$subclass,decreasing = F),]
+lasso2_match_table <- as.data.frame(matrix(nrow = nrow(lasso2_red_f),ncol=3))
+colnames(lasso2_match_table) <- c("F","M","subclass")
+lasso2_match_table[,1] <- lasso2_red_f$X
+lasso2_match_table[,2] <- lasso2_red_m$X
+lasso2_match_table[,3] <- as.numeric(lasso2_red_f$subclass) #row names are in original 2015 dataset
+saveRDS(lasso2_match_table, file = "lasso2_match_table.RDS")
+rm(lasso2_match_red,lasso2_red_f,lasso2_red_m)
+
+glm2_match_red <- matched.glm2 %>% dplyr::select(X,gender,subclass)
+glm2_match_red <-glm2_match_red[order(glm2_match_red$subclass,decreasing = F),]
+glm2_red_f<-glm2_match_red %>% filter(gender == 1)
+glm2_red_f <-glm2_red_f[order(glm2_red_f$subclass,decreasing = F),]
+glm2_red_m <-glm2_match_red %>% filter(gender == 0)
+glm2_red_m <-glm2_red_m[order(glm2_red_m$subclass,decreasing = F),]
+glm2_match_table <- as.data.frame(matrix(nrow = nrow(glm2_red_f),ncol=3))
+colnames(glm2_match_table) <- c("F","M","subclass")
+glm2_match_table[,1] <- glm2_red_f$X
+glm2_match_table[,2] <- glm2_red_m$X
+glm2_match_table[,3] <- as.numeric(glm2_red_f$subclass) #row names are in original 2015 dataset
+saveRDS(glm2_match_table, file = "glm2_match_table.RDS")
+rm(glm2_match_red,glm2_red_f,glm2_red_m)
+
+
+cardlasso_match_red <- tibble::rownames_to_column(matched.cardlasso, var = "X") %>% dplyr::select(X, gender,subclass)
+cardlasso_match_red <-cardlasso_match_red[order(cardlasso_match_red$subclass,decreasing = F),]
+cardlasso_red_f<-cardlasso_match_red %>% filter(gender == 1)
+cardlasso_red_f <-cardlasso_red_f[order(cardlasso_red_f$subclass,decreasing = F),]
+cardlasso_red_m <-cardlasso_match_red %>% filter(gender == 0)
+cardlasso_red_m <-cardlasso_red_m[order(cardlasso_red_m$subclass,decreasing = F),]
+cardlasso_match_table <- as.data.frame(matrix(nrow = nrow(cardlasso_red_f),ncol=3))
+colnames(cardlasso_match_table) <- c("F","M","subclass")
+cardlasso_match_table[,1] <- cardlasso_red_f$X
+cardlasso_match_table[,2] <- cardlasso_red_m$X
+cardlasso_match_table[,3] <- as.numeric(cardlasso_red_f$subclass) #row names are in original 2015 dataset
+saveRDS(cardlasso_match_table, file = "cardlasso_match_table.RDS")
+rm(cardlasso_match_red,cardlasso_red_f,cardlasso_red_m)
+
+cardglm_match_red <- tibble::rownames_to_column(matched.cardglm, var = "X") %>% dplyr::select(X, gender,subclass)
+cardglm_match_red <-cardglm_match_red[order(cardglm_match_red$subclass,decreasing = F),]
+cardglm_red_f<-cardglm_match_red %>% filter(gender == 1)
+cardglm_red_f <-cardglm_red_f[order(cardglm_red_f$subclass,decreasing = F),]
+cardglm_red_m <-cardglm_match_red %>% filter(gender == 0)
+cardglm_red_m <-cardglm_red_m[order(cardglm_red_m$subclass,decreasing = F),]
+cardglm_match_table <- as.data.frame(matrix(nrow = nrow(cardglm_red_f),ncol=3))
+colnames(cardglm_match_table) <- c("F","M","subclass")
+cardglm_match_table[,1] <- cardglm_red_f$X
+cardglm_match_table[,2] <- cardglm_red_m$X
+cardglm_match_table[,3] <- as.numeric(cardglm_red_f$subclass) #row names are in original 2015 dataset
+saveRDS(cardglm_match_table, file = "cardglm_match_table.RDS")
+rm(cardglm_match_red,cardglm_red_f,cardglm_red_m)
+
+# for the cosine distance matrix calculations, please refer to the respective file
+# named cardlasso_cos.R etc.
+```
+
+
+```{r, loveplots}
+lovePlotCompare(cov_15[,-c(46,61:74)], cov_15$gender, matched.cardlasso[,-c(46,61:77)], matched.cardlasso$gender)
+
+
+
+
+```
