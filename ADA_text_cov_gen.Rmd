@@ -1,0 +1,202 @@
+---
+title: "ADA 2015 tidy"
+author: "Jessica Guo"
+date: "2023-07-07"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+set.seed(1000)
+library(topicmodels)
+library(dplyr)
+library(NLP)
+library(papeR)
+library(tidytext)
+library(ggplot2)
+library(tm)
+library(tidyr)
+library(wordcloud)
+library(rJava)
+library(randChecks)
+library(stm)
+library(quanteda)
+library(corpus)
+library(quanteda.sentiment)
+library(quanteda.dictionaries)
+library(quanteda.corpora)
+library(quanteda.textstats)
+library(textreg)
+library(MatchIt)
+library(data.table)
+library(cobalt)
+library(designmatch)
+library(cem)
+library(lsa)
+library(SuperLearner)
+library(npcausal)
+library(lmtest)
+library(sandwich)
+```
+
+
+```{r, processing and STM}
+twentyfifteen <- read.csv("twentyfifteen.csv", sep = ",",header=TRUE)
+for (i in 1:97361){
+  twentyfifteen$selftext[i] <-gsub(pattern = "\n",replacement = "",twentyfifteen$selftext[i]) #\n bolden
+  twentyfifteen$selftext[i] <-gsub(pattern = "\\*",replacement = "",twentyfifteen$selftext[i]) #asterisk
+  twentyfifteen$selftext[i] <-gsub(pattern = "\\\\",replacement= "",twentyfifteen$selftext[i]) # blackslash
+  twentyfifteen$selftext[i] <-gsub(pattern = "^.€.$",replacement = "^'$",twentyfifteen$selftext[i]) # apostrophe
+  twentyfifteen$selftext[i] <- iconv(twentyfifteen$selftext[i], from="UTF-8", to="ASCII", sub="") # also apostrophe
+}
+
+# STM initial processing
+processedtext_2015 <-stm::textProcessor(twentyfifteen$selftext, metadata = twentyfifteen, 
+                                        striphtml = TRUE,lowercase=TRUE,
+                           removestopwords = TRUE,stem=TRUE,language = "en",verbose = TRUE,
+                           removepunctuation = TRUE)
+
+outtext_15 <-stm::prepDocuments(processedtext_2015$documents,processedtext_2015$vocab,
+                             processedtext_2015$meta,lower.thresh = 5)
+textdocs_15 <- outtext_15$documents
+textvocab_15 <- outtext_15$vocab
+textmeta_15 <-outtext_15$meta
+saveRDS(outtext_15, file = "OUTtext_15.rds")
+
+
+STM20_2015 <- stm::stm(documents = outtext_15$documents, vocab = outtext_15$vocab, K = 20,
+                       content = ~gender,prevalence =~gender,max.em.its = 75, data = outtext_15$meta,
+                       init.type = "Spectral")
+saveRDS(STM20_2015,file = "mod1_2015_K20.rds")
+mod1_2015_K20 <-readRDS("mod1_2015_K20.rds")
+
+fake <- textmeta_15
+fake$gender = "F"  # changing all M to F
+
+processedtext_f <-stm::textProcessor(fake$selftext, metadata = fake, striphtml = TRUE,lowercase=TRUE,
+                                     removestopwords = TRUE,stem=TRUE,language = "en",verbose = TRUE,
+                                     removepunctuation = TRUE)
+
+outtext_f <-stm::prepDocuments(processedtext_f$documents,processedtext_f$vocab,processedtext_f$meta,lower.thresh = 5)
+saveRDS(outtext_f, file = "OUTtext_f.rds")
+rm(fake)
+newfit <-fitNewDocuments(model = mod1_2015_K20,documents = outtext_f$documents,
+                         newData=outtext_f$meta ,origData = outtext_15$meta,
+                         prevalencePrior = "Covariate",contentPrior = "Average",verbose = TRUE)
+newtheta <-newfit$theta # topic proportions
+write.csv(newtheta,file = "newtheta.csv")
+
+
+```
+
+```{r, other text cov}
+#readability
+text_corpus <- corpus(textmeta_15, text_field = "selftext")
+# print(text_corpus)
+textstat <-quanteda.textstats::textstat_summary(text_corpus)
+
+readflesch <- quanteda.textstats::textstat_readability(
+  text_corpus,
+  measure = "Flesch",
+  remove_hyphens = TRUE,
+  min_sentence_length = 1,
+  max_sentence_length = 10000,
+  intermediate = FALSE
+)
+readDC <- quanteda.textstats::textstat_readability(
+  text_corpus,
+  measure = "Dale.Chall",
+  remove_hyphens = TRUE,
+  min_sentence_length = 1,
+  max_sentence_length = 10000,
+  intermediate = FALSE
+)
+readDS <- quanteda.textstats::textstat_readability(
+  text_corpus,
+  measure = "Dickes.Steiwer",
+  remove_hyphens = TRUE,
+  min_sentence_length = 1,
+  max_sentence_length = 10000,
+  intermediate = FALSE
+)
+readTB <- quanteda.textstats::textstat_readability(
+  text_corpus,
+  measure = "Traenkle.Bailer",
+  remove_hyphens = TRUE,
+  min_sentence_length = 1,
+  max_sentence_length = 10000,
+  intermediate = FALSE
+)
+
+readability <- cbind(readflesch,readDC[,2],readDS[,2],readTB[,2])
+rm(readDC,readTB,readflesch,readDS)
+#LIWCAlike
+output_lsd <- quanteda.dictionaries::liwcalike(text_corpus, 
+                        dictionary = data_dictionary_NRC)
+
+# sentiment+valence
+genin <- textstat_polarity(text_corpus, dictionary = data_dictionary_geninqposneg)
+huliu <- textstat_polarity(text_corpus, dictionary = data_dictionary_HuLiu)
+LMC <- textstat_polarity(text_corpus, dictionary = data_dictionary_LoughranMcDonald)
+LSD <- textstat_polarity(text_corpus, dictionary = data_dictionary_LSD2015)
+NRC <- textstat_polarity(text_corpus, dictionary = data_dictionary_NRC)
+SWS <- textstat_polarity(text_corpus, dictionary = data_dictionary_sentiws)
+
+toks <- tokens(textmeta_15$selftext)
+valence(data_dictionary_LSD2015) <- list(positive = 1, negative = -1, 
+                                         neg_negative = 1, neg_positive = -1)
+LSDdouble <- textstat_valence(toks, data_dictionary_LSD2015)
+
+ANEW_pleasure <-textstat_valence(text_corpus,dictionary = data_dictionary_ANEW["pleasure"])
+ANEW_arousal <-textstat_valence(text_corpus,dictionary = data_dictionary_ANEW["arousal"])
+ANEW_dominance <-textstat_valence(text_corpus,dictionary = data_dictionary_ANEW["dominance"])
+
+rm(fake)
+textmeta_15$gender_bin = ifelse(textmeta_15$gender == "F","1","0")
+sentva<- cbind(genin[,2],huliu[,2],LMC[,2],LSD[,2],NRC[,2],SWS[,2],
+      ANEW_pleasure[,2],ANEW_arousal[,2],ANEW_dominance[,2],LSDdouble[,2],textmeta_15$gender_bin)
+colnames(sentva) <- c("genin","huliu","LMC","LSD","NRC",
+                      "SWS","pleasure","arousal","dominance","LSDdouble","gender")
+
+cov_15 <- cbind(newtheta[,-c(20)],output_lsd[,-c(1,2)],textmeta_15$gender_bin,sentva[,-c(11)],readability[,-c(1)])
+rm(sentva,huliu,genin,LMC,LSD, LSDdouble, NRC,
+   readability,ANEW_arousal,ANEW_pleasure,
+   ANEW_dominance,output_lsd,data_dictionary_LSD2015,SWS,textstat,toks)
+colnames(cov_15)[c(46,58,59,60)] <- c("gender","Dale.Chall","Dickes.Steiwer","Traenkle.Bailer")
+
+
+textmeta_15$Jan_indic <- ifelse(textmeta_15$created_utc <"2015-02-01 00:00:00", "1","0")
+textmeta_15$Feb_indic <- ifelse(textmeta_15$created_utc < "2015-03-01 00:00:00" &
+                                    textmeta_15$created_utc >= "2015-02-01 00:00:00", "1","0")
+textmeta_15$Mar_indic <- ifelse(textmeta_15$created_utc < "2015-04-01 00:00:00" &
+                                    textmeta_15$created_utc >= "2015-03-01 00:00:00", "1","0")
+textmeta_15$Apr_indic <- ifelse(textmeta_15$created_utc < "2015-05-01 00:00:00" &
+                                    textmeta_15$created_utc >= "2015-04-01 00:00:00", "1","0")
+textmeta_15$May_indic <- ifelse(textmeta_15$created_utc < "2015-06-01 00:00:00" &
+                                    textmeta_15$created_utc >= "2015-05-01 00:00:00", "1","0")
+textmeta_15$Jun_indic <- ifelse(textmeta_15$created_utc < "2015-07-01 00:00:00" &
+                                    textmeta_15$created_utc >= "2015-06-01 00:00:00", "1","0")
+textmeta_15$Jul_indic <- ifelse(textmeta_15$created_utc < "2015-08-01 00:00:00" &
+                                    textmeta_15$created_utc >= "2015-07-01 00:00:00", "1","0")
+textmeta_15$Aug_indic <- ifelse(textmeta_15$created_utc < "2015-09-01 00:00:00" &
+                                    textmeta_15$created_utc >= "2015-08-01 00:00:00", "1","0")
+textmeta_15$Sep_indic <- ifelse(textmeta_15$created_utc < "2015-10-01 00:00:00" &
+                                    textmeta_15$created_utc >= "2015-09-01 00:00:00", "1","0")
+textmeta_15$Oct_indic <- ifelse(textmeta_15$created_utc < "2015-11-01 00:00:00" &
+                                    textmeta_15$created_utc >= "2015-10-01 00:00:00", "1","0")
+textmeta_15$Nov_indic <- ifelse(textmeta_15$created_utc < "2015-12-01 00:00:00" &
+                                    textmeta_15$created_utc >= "2015-11-01 00:00:00", "1","0")
+textmeta_15$Dec_indic <- ifelse(textmeta_15$created_utc >="2015-12-01 00:00:00", "1","0")
+
+month_ind <- textmeta_15[,38:49]
+cov_15 <- cbind(cov_15,month_ind)
+cov_15 <-cbind(cov_15, textmeta_15$ups,textmeta_15$num_comments)
+colnames(cov_15)[c(73,74)] <- c("ups","num_comments")
+colnames(cov_15)[c(1:19)] <- paste0('X',1:19)
+cov_15 <- cov_15 %>% mutate_at(c('genin', 'huliu','LMC','LSD','NRC','SWS','pleasure',
+                                 'arousal','dominance','LSDdouble'), as.numeric)
+
+write.csv(cov_15, file = "cov_15.csv")
+
+rm(month_ind)
+```
