@@ -21,9 +21,10 @@ library(rJava)
 library(randChecks)
 library(stm)
 library(quanteda)
-library(corpus)
 library(quanteda.sentiment)
+devtools::install_github("kbenoit/quanteda.dictionaries") 
 library(quanteda.dictionaries)
+devtools::install_github("quanteda/quanteda.corpora")
 library(quanteda.corpora)
 library(quanteda.textstats)
 library(textreg)
@@ -34,6 +35,7 @@ library(designmatch)
 library(cem)
 library(lsa)
 library(SuperLearner)
+devtools::install_github("ehkennedy/npcausal")
 library(npcausal)
 library(lmtest)
 library(sandwich)
@@ -42,13 +44,16 @@ library(sandwich)
 
 ```{r, processing and STM}
 twentyfifteen <- read.csv("twentyfifteen.csv", sep = ",",header=TRUE)
-for (i in 1:97361){
-  twentyfifteen$selftext[i] <-gsub(pattern = "\n",replacement = "",twentyfifteen$selftext[i]) #\n bolden
-  twentyfifteen$selftext[i] <-gsub(pattern = "\\*",replacement = "",twentyfifteen$selftext[i]) #asterisk
-  twentyfifteen$selftext[i] <-gsub(pattern = "\\\\",replacement= "",twentyfifteen$selftext[i]) # blackslash
-  twentyfifteen$selftext[i] <-gsub(pattern = "^.€.$",replacement = "^'$",twentyfifteen$selftext[i]) # apostrophe
-  twentyfifteen$selftext[i] <- iconv(twentyfifteen$selftext[i], from="UTF-8", to="ASCII", sub="") # also apostrophe
-}
+
+twentyfifteen$selftext <-gsub(pattern = "&amp",replacement = "",twentyfifteen$selftext) # &
+twentyfifteen$selftext <-gsub(pattern = "\n",replacement = "",twentyfifteen$selftext) #\n bolden
+twentyfifteen$selftext <-gsub(pattern = "\\*",replacement = "",twentyfifteen$selftext) #asterisk
+twentyfifteen$selftext <-gsub(pattern = "\\\\",replacement= "",twentyfifteen$selftext) # blackslash
+twentyfifteen$selftext <-gsub(pattern = "^.€.$",replacement = "^'$",twentyfifteen$selftext) # apostrophe
+twentyfifteen$selftext <- iconv(twentyfifteen$selftext, from="UTF-8", to="ASCII", sub="") # also apostrophe
+
+twentyfifteen$selftext <- paste(twentyfifteen$title, twentyfifteen$selftext, sep = " ")
+twentyfifteen <- twentyfifteen[-which(twentyfifteen$num_comments == -1),]
 
 # STM initial processing
 processedtext_2015 <-stm::textProcessor(twentyfifteen$selftext, metadata = twentyfifteen, 
