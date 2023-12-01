@@ -21,7 +21,6 @@ library(rJava)
 library(randChecks)
 library(stm)
 library(quanteda)
-library(corpus)
 library(quanteda.sentiment)
 library(quanteda.dictionaries)
 library(quanteda.corpora)
@@ -61,7 +60,6 @@ max(card_cb)
 ```
 
 ```{r, cosine distance evaluation}
-# not the most efficient way of doing this
 lasso2_match_red <- matched.lasso2 %>% dplyr::select(X,gender,subclass)
 lasso2_match_red <-lasso2_match_red[order(lasso2_match_red$subclass,decreasing = F),]
 lasso2_red_f<-lasso2_match_red %>% filter(gender == 1)
@@ -126,8 +124,6 @@ rm(cardglm_match_red,cardglm_red_f,cardglm_red_m)
 
 ```{r, loveplots}
 lovePlotCompare(cov_15[,-c(46,61:74)], cov_15$gender, matched.cardlasso[,-c(46,61:77)], matched.cardlasso$gender)
-
-
 
 
 ```
