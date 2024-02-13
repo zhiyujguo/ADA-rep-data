@@ -52,7 +52,6 @@ twentyfifteen$selftext <-gsub(pattern = "\\\\",replacement= "",twentyfifteen$sel
 twentyfifteen$selftext <-gsub(pattern = "^.€.$",replacement = "^'$",twentyfifteen$selftext) # apostrophe
 twentyfifteen$selftext <- iconv(twentyfifteen$selftext, from="UTF-8", to="ASCII", sub="") # also apostrophe
 
-twentyfifteen$selftext <- paste(twentyfifteen$title, twentyfifteen$selftext, sep = " ")
 twentyfifteen <- twentyfifteen[-which(twentyfifteen$num_comments == -1),]
 
 # STM initial processing
@@ -84,11 +83,12 @@ processedtext_f <-stm::textProcessor(fake$selftext, metadata = fake, striphtml =
 
 outtext_f <-stm::prepDocuments(processedtext_f$documents,processedtext_f$vocab,processedtext_f$meta,lower.thresh = 5)
 saveRDS(outtext_f, file = "OUTtext_f.rds")
-rm(fake)
+rm(fake,outtext_f, processedtext_f,processedtext_2015,outtext_15) #gc
 newfit <-fitNewDocuments(model = mod1_2015_K20,documents = outtext_f$documents,
                          newData=outtext_f$meta ,origData = outtext_15$meta,
                          prevalencePrior = "Covariate",contentPrior = "Average",verbose = TRUE)
 newtheta <-newfit$theta # topic proportions
+rm(newfit)
 write.csv(newtheta,file = "newtheta.csv")
 
 
@@ -202,6 +202,6 @@ cov_15 <- cov_15 %>% mutate_at(c('genin', 'huliu','LMC','LSD','NRC','SWS','pleas
                                  'arousal','dominance','LSDdouble'), as.numeric)
 
 write.csv(cov_15, file = "cov_15.csv")
-
+saveRDS(textmeta_15, file = "textmeta_15.RDS")
 rm(month_ind)
 ```
