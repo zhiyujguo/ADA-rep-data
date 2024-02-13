@@ -101,25 +101,27 @@ pair_distances = function (dat, Z, include = c("cosine", "euclidean", "mahalanob
   return(tmp)
 }
 textmeta_15 <- readRDS("textmeta_15.RDS")
-cardglm_match_table <- readRDS("cardglm_match_table.RDS")
-cardglm_cosdist <- matrix(nrow = nrow(cardglm_match_table),ncol=1)
-colnames(cardglm_cosdist)<-c("cos_dist")
+cardnp_match_table <- readRDS("cardnp_match_table.RDS")
+cardnp_title_cosdist <- matrix(nrow = nrow(cardnp_match_table),ncol=1)
+colnames(cardnp_title_cosdist)<-c("cos_dist")
 gender_bin <- c(1,0)
-for (i in 1:nrow(cardglm_match_table)) {
+for (i in 1:nrow(cardnp_match_table)) {
   # Extract the pair of rows from textmeta_15 using row names
-  row_name_1 <- as.character(cardglm_match_table[i, 1])
-  row_name_2 <- as.character(cardglm_match_table[i, 2])
+  row_name_1 <- as.character(cardnp_match_table[i, 1])
+  row_name_2 <- as.character(cardnp_match_table[i, 2])
   
   text_tr <- textmeta_15[c(row_name_1, row_name_2), ]
   
-  # Create a corpus using the 'selftext' field
-  corp_2015 <- corpus(text_tr, text_field = "selftext")
+  # Create a corpus using the 'title' field
+  corp_2015 <- corpus(text_tr, text_field = "title")
   
   # Tokenize and create a dfm
   toks <- corp_2015 %>%
     tokens(remove_numbers = TRUE, remove_punct = TRUE, remove_separators = TRUE)
   dfm_2015 <- dfm(toks, tolower = TRUE)
-  # Calculate cosine distances and store in cosdit
-  cardglm_cosdist[i] <- pair_distances(dfm_2015, gender_bin, include = "cosine", verbose = FALSE)[, 3]
+  
+  # Calculate cosine distances and store in cardnp_title_cosdist
+  cardnp_title_cosdist[i] <- pair_distances(dfm_2015, gender_bin, include = "cosine", verbose = FALSE)[, 3]
 }
-saveRDS(cardglm_cosdist, file = "cardglm_cosdist.RDS")
+
+saveRDS(cardnp_title_cosdist, file = "cardnp_title_cosdist.RDS")

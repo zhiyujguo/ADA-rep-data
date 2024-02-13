@@ -101,14 +101,14 @@ pair_distances = function (dat, Z, include = c("cosine", "euclidean", "mahalanob
   return(tmp)
 }
 textmeta_15 <- readRDS("textmeta_15.RDS")
-cardglm_match_table <- readRDS("cardglm_match_table.RDS")
-cardglm_cosdist <- matrix(nrow = nrow(cardglm_match_table),ncol=1)
-colnames(cardglm_cosdist)<-c("cos_dist")
+glm2_match_table <- readRDS("glm2_match_table.RDS")
+glm2_cosdist <- matrix(nrow = nrow(glm2_match_table),ncol=1)
+colnames(glm2_cosdist)<-c("cos_dist")
 gender_bin <- c(1,0)
-for (i in 1:nrow(cardglm_match_table)) {
+for (i in 1:nrow(glm2_match_table)) {
   # Extract the pair of rows from textmeta_15 using row names
-  row_name_1 <- as.character(cardglm_match_table[i, 1])
-  row_name_2 <- as.character(cardglm_match_table[i, 2])
+  row_name_1 <- as.character(glm2_match_table[i, 1])
+  row_name_2 <- as.character(glm2_match_table[i, 2])
   
   text_tr <- textmeta_15[c(row_name_1, row_name_2), ]
   
@@ -120,6 +120,6 @@ for (i in 1:nrow(cardglm_match_table)) {
     tokens(remove_numbers = TRUE, remove_punct = TRUE, remove_separators = TRUE)
   dfm_2015 <- dfm(toks, tolower = TRUE)
   # Calculate cosine distances and store in cosdit
-  cardglm_cosdist[i] <- pair_distances(dfm_2015, gender_bin, include = "cosine", verbose = FALSE)[, 3]
+  glm2_cosdist[i] <- pair_distances(dfm_2015, gender_bin, include = "cosine", verbose = FALSE)[, 3]
 }
-saveRDS(cardglm_cosdist, file = "cardglm_cosdist.RDS")
+saveRDS(glm2_cosdist, file = "glm2_cosdist.RDS")
