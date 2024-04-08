@@ -79,20 +79,20 @@ ate_m_comm_og <- ate(matched.cardnp$num_comments, matched.cardnp$gender,
 ```{r, mean diff}
 full_comm_tau <- mean(log(cov_15$num_comments[cov_15$gender == "1"]+1))-
   mean(log(cov_15$num_comments[cov_15$gender == "0"]+1))
-se_full_comm <- sqrt(var(log(cov_15$num_comments[cov_15$gender == "1"]+1))/nrow(cov_15[cov_15$gender == "1",])+var(log(cov_15$num_comments[cov_15$gender == "0"]+1))/nrow(cov_15[cov_15$gender == "0",]))
+se_full_comm <- 1.96*sqrt(var(log(cov_15$num_comments[cov_15$gender == "1"]+1))/nrow(cov_15[cov_15$gender == "1",])+var(log(cov_15$num_comments[cov_15$gender == "0"]+1))/nrow(cov_15[cov_15$gender == "0",]))
 
 
 full_ups_tau <- mean(log(cov_15$ups[cov_15$gender == "1"]+1))-
   mean(log(cov_15$ups[cov_15$gender == "0"]+1))
-se_full_ups <- sqrt(var(log(cov_15$ups[cov_15$gender == "1"]+1))/nrow(cov_15[cov_15$gender == "1",])+var(log(cov_15$ups[cov_15$gender == "0"]+1))/nrow(cov_15[cov_15$gender == "0",]))
+se_full_ups <- 1.96*sqrt(var(log(cov_15$ups[cov_15$gender == "1"]+1))/nrow(cov_15[cov_15$gender == "1",])+var(log(cov_15$ups[cov_15$gender == "0"]+1))/nrow(cov_15[cov_15$gender == "0",]))
 
 m_comm_tau <- mean(log(matched.cardnp$num_comments[matched.cardnp$gender == "2"]+1))-
   mean(log(matched.cardnp$num_comments[matched.cardnp$gender == "1"]+1))
-se_m_comm <- sqrt(var(log(matched.cardnp$num_comments[matched.cardnp$gender == "2"]+1))/nrow(matched.cardnp[matched.cardnp$gender == "2",])+var(log(matched.cardnp$num_comments[matched.cardnp$gender == "1"]+1))/nrow(matched.cardnp[matched.cardnp$gender == "1",]))
+se_m_comm <- 1.96*sqrt(var(log(matched.cardnp$num_comments[matched.cardnp$gender == "2"]+1))/nrow(matched.cardnp[matched.cardnp$gender == "2",])+var(log(matched.cardnp$num_comments[matched.cardnp$gender == "1"]+1))/nrow(matched.cardnp[matched.cardnp$gender == "1",]))
 
 m_ups_tau <- mean(log(matched.cardnp$ups[matched.cardnp$gender == "2"]+1))-
   mean(log(matched.cardnp$ups[matched.cardnp$gender == "1"]+1))
-se_m_ups <- sqrt(var(log(matched.cardnp$ups[matched.cardnp$gender == "2"]+1))/nrow(matched.cardnp[matched.cardnp$gender == "2",])+var(log(matched.cardnp$ups[matched.cardnp$gender == "1"]+1))/nrow(matched.cardnp[matched.cardnp$gender == "1",]))
+se_m_ups <- 1.96*sqrt(var(log(matched.cardnp$ups[matched.cardnp$gender == "2"]+1))/nrow(matched.cardnp[matched.cardnp$gender == "2",])+var(log(matched.cardnp$ups[matched.cardnp$gender == "1"]+1))/nrow(matched.cardnp[matched.cardnp$gender == "1",]))
 ```
 
 
@@ -194,8 +194,9 @@ indices_2 <- cardnp_match_table[, 2]
 
 # Use matrix indexing to extract values
 meandiff_y_up[, 1] <- data_full[indices_1, "ups"]
+meandiff_y_up$female = log(meandiff_y_up$female+1)
 meandiff_y_up[, 2] <- data_full[indices_2, "ups"]
-
+meandiff_y_up$male = log(meandiff_y_up$male+1)
 # sensitivity analysis
 gamma_values <- seq(1, 2, by = 0.01)
 p_values <- sapply(gamma_values, function(gamma) {
@@ -204,6 +205,16 @@ p_values <- sapply(gamma_values, function(gamma) {
 
 plot(gamma_values, p_values, type = "l", col = "blue", xlab = "Gamma", ylab = "P-value", main = "P-value vs Gamma")
 senmw(meandiff_y_up, method = "t", gamma = 1.08)
+
+# same but for number of comments
+meandiff_y_comm = as.data.frame(matrix(nrow = nrow(cardnp_match_table), ncol = 2))
+colnames(meandiff_y_comm) <- c("female", "male")
+meandiff_y_comm[, 1] <- data_full[indices_1, "num_comments"]
+meandiff_y_comm$female = log(meandiff_y_comm$female+1)
+meandiff_y_comm[, 2] <- data_full[indices_2, "num_comments"]
+meandiff_y_comm$male = log(meandiff_y_comm$male+1)
+senmw(meandiff_y_comm, method = "t", gamma = 1)
 ```
+
 
 
