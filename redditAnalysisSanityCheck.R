@@ -1,7 +1,7 @@
 
 setwd("/Users/zjbranson/Documents/CMU/Research/Reddit Project")
-data = readRDS("matched.cardnp.rds")
-
+data = readRDS("matched.cardglm.rds")
+# data = cov_15
 #female and male subsets
 data.f = subset(data, gender == 1)
 data.m = subset(data, gender == 0)
@@ -74,17 +74,42 @@ data.y = cbind(data.f$num_comments, data.m$num_comments)
 #(For the not-transformed num_comments, this is the case.)
 
 #then, the sensitivity analysis with gamma = 1 is:
-senmw(y = -data.y, gamma = 1, method = "t")
+senmw(y = data.y, gamma = 1, method = "t")
 #here is the vector of gamma values
 gamma.seq = seq(1, 2, by = 0.01)
 #now we'll compute the p-value for each gamma
 pvalue.seq = vector(length = length(gamma.seq))
 for(g in 1:length(gamma.seq)){
-  pvalue.seq[g] = senmw(y = -data.y,
+  pvalue.seq[g] = senmw(y = data.y,
   	gamma = gamma.seq[g], method = "t")$pval
 }
 
-plot(gamma.seq, pvalue.seq)
+plot(gamma.seq, pvalue.seq, pch = 16,xlab= "Gamma",
+                                ylab = "p-value", main = "p−value v. gamma, number of comments")
+abline(a=0.05, b=0, col="red")
+abline(v=1.13, lty = 2, col = "gray")
+legend("right", legend=c("p-value = 0.05", "Gamma = 1.13"),
+       col=c("red", "gray"), lty=1:2, cex=1.2)
+
+# original scale, num of upvotes
+data.y = cbind(data.f$ups, data.m$ups)
+senmw(y = data.y, gamma = 1, method = "t")
+#here is the vector of gamma values
+gamma.seq = seq(1, 2, by = 0.01)
+#now we'll compute the p-value for each gamma
+pvalue.seq = vector(length = length(gamma.seq))
+for(g in 1:length(gamma.seq)){
+  pvalue.seq[g] = senmw(y = data.y,
+                        gamma = gamma.seq[g], method = "t")$pval
+}
+
+plot(gamma.seq, pvalue.seq, pch = 16,xlab= "Gamma",
+     ylab = "p-value", main = "p−value v. gamma, number of upvotes")
+abline(a=0.05, b=0, col="red")
+abline(v=1.33, lty = 2, col = "gray")
+legend("right", legend=c("p-value = 0.05", "Gamma = 1.33"),
+       col=c("red", "gray"), lty=1:2, cex=1.2)
+
 
 #Let's repeat this sensitivity analysis, 
 #but for the log-transformed num_comments.
@@ -102,7 +127,12 @@ for(g in 1:length(gamma.seq)){
   	gamma = gamma.seq[g], method = "t")$pval
 }
 
-plot(gamma.seq, pvalue.seq)
+plot(gamma.seq, pvalue.seq, pch = 16,xlab= "Gamma",
+     ylab = "p-value", main = "p−value v. gamma, log(comments+1)")
+abline(a=0.05, b=0, col="red")
+abline(v=1.01, lty = 2, col = "gray")
+legend("right", legend=c("p-value = 0.05", "Gamma = 1.01"),
+       col=c("red", "gray"), lty=1:2, cex=1.2)
 
 # log transformed, upvotes
 data.y = cbind(log(data.f$ups + 1),
@@ -116,4 +146,10 @@ for(g in 1:length(gamma.seq)){
   pvalue.seq[g] = senmw(y = data.y,
                         gamma = gamma.seq[g], method = "t")$pval
 }
-plot(gamma.seq, pvalue.seq)
+plot(gamma.seq, pvalue.seq, pch = 16,xlab= "Gamma",
+     ylab = "p-value", main = "p−value v. gamma, log(upvotes+1)")
+abline(a=0.05, b=0, col="red")
+abline(v=1.09, lty = 2, col = "gray")
+legend("right", legend=c("p-value = 0.05", "Gamma = 1.09"),
+       col=c("red", "gray"), lty=1:2, cex=1.2)
+

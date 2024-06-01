@@ -59,19 +59,19 @@ ps_npcausal <- ate_full_ups_og$nuis$pi_a1[cardmatch$weights == "1"]
 saveRDS(ps_npcausal, file = "ps_npcausal.RDS")
 # after matching, log(Y+1)
 cov_names <- names(subset(cov_15,select = -c(gender,ups,num_comments)))
-ate_m_ups <- ate(log(matched.cardnp$ups+1), matched.cardnp$gender,
-                 matched.cardnp[,names(matched.cardnp) %in% cov_names],
+ate_m_ups <- ate(log(matched.cardglm$ups+1), matched.cardglm$gender,
+                 matched.cardglm[,names(matched.cardglm) %in% cov_names],
                  nsplits = 2, sl.lib = c("SL.glm","SL.ranger","SL.glmnet","SL.gam"))
-ate_m_comm <- ate(log(matched.cardnp$num_comments+1), matched.cardnp$gender,
-                  matched.cardnp[,names(matched.cardnp) %in% cov_names],
+ate_m_comm <- ate(log(matched.cardglm$num_comments+1), matched.cardglm$gender,
+                  matched.cardglm[,names(matched.cardglm) %in% cov_names],
                  nsplits = 2, sl.lib = c("SL.glm","SL.ranger","SL.glmnet","SL.gam"))
 
 # original scale
-ate_m_ups_og <- ate(matched.cardnp$ups, matched.cardnp$gender,
-                 matched.cardnp[,names(matched.cardnp) %in% cov_names],
+ate_m_ups_og <- ate(matched.cardglm$ups, matched.cardglm$gender,
+                 matched.cardglm[,names(matched.cardglm) %in% cov_names],
                  nsplits = 2, sl.lib = c("SL.glm","SL.ranger","SL.glmnet","SL.gam"))
-ate_m_comm_og <- ate(matched.cardnp$num_comments, matched.cardnp$gender,
-                  matched.cardnp[,names(matched.cardnp) %in% cov_names],
+ate_m_comm_og <- ate(matched.cardglm$num_comments, matched.cardglm$gender,
+                  matched.cardglm[,names(matched.cardglm) %in% cov_names],
                  nsplits = 2, sl.lib = c("SL.glm","SL.ranger","SL.glmnet","SL.gam"))
 ```
 
@@ -86,13 +86,13 @@ full_ups_tau <- mean(log(cov_15$ups[cov_15$gender == "1"]+1))-
   mean(log(cov_15$ups[cov_15$gender == "0"]+1))
 se_full_ups <- 1.96*sqrt(var(log(cov_15$ups[cov_15$gender == "1"]+1))/nrow(cov_15[cov_15$gender == "1",])+var(log(cov_15$ups[cov_15$gender == "0"]+1))/nrow(cov_15[cov_15$gender == "0",]))
 
-m_comm_tau <- mean(log(matched.cardnp$num_comments[matched.cardnp$gender == "2"]+1))-
-  mean(log(matched.cardnp$num_comments[matched.cardnp$gender == "1"]+1))
-se_m_comm <- 1.96*sqrt(var(log(matched.cardnp$num_comments[matched.cardnp$gender == "2"]+1))/nrow(matched.cardnp[matched.cardnp$gender == "2",])+var(log(matched.cardnp$num_comments[matched.cardnp$gender == "1"]+1))/nrow(matched.cardnp[matched.cardnp$gender == "1",]))
+m_comm_tau <- mean(log(matched.cardglm$num_comments[matched.cardglm$gender == "2"]+1))-
+  mean(log(matched.cardglm$num_comments[matched.cardglm$gender == "1"]+1))
+se_m_comm <- 1.96*sqrt(var(log(matched.cardglm$num_comments[matched.cardglm$gender == "2"]+1))/nrow(matched.cardglm[matched.cardglm$gender == "2",])+var(log(matched.cardglm$num_comments[matched.cardglm$gender == "1"]+1))/nrow(matched.cardglm[matched.cardglm$gender == "1",]))
 
-m_ups_tau <- mean(log(matched.cardnp$ups[matched.cardnp$gender == "2"]+1))-
-  mean(log(matched.cardnp$ups[matched.cardnp$gender == "1"]+1))
-se_m_ups <- 1.96*sqrt(var(log(matched.cardnp$ups[matched.cardnp$gender == "2"]+1))/nrow(matched.cardnp[matched.cardnp$gender == "2",])+var(log(matched.cardnp$ups[matched.cardnp$gender == "1"]+1))/nrow(matched.cardnp[matched.cardnp$gender == "1",]))
+m_ups_tau <- mean(log(matched.cardglm$ups[matched.cardglm$gender == "2"]+1))-
+  mean(log(matched.cardglm$ups[matched.cardglm$gender == "1"]+1))
+se_m_ups <- 1.96*sqrt(var(log(matched.cardglm$ups[matched.cardglm$gender == "2"]+1))/nrow(matched.cardglm[matched.cardglm$gender == "2",])+var(log(matched.cardglm$ups[matched.cardglm$gender == "1"]+1))/nrow(matched.cardglm[matched.cardglm$gender == "1",]))
 ```
 
 
@@ -109,28 +109,28 @@ for (i in 1:71){
 x3 <- cov_15$gender*x2
 colnames(x3) <- paste(colnames(cov_15[,-c(46,73,74)]), "gender", sep=":")
 data_full = cbind(cov_15,x3)
-lm_lasso_ups <- lm(log(ups+1)~.-num_comments, data = data_full)
+lm_lasso_ups <- lm(ups~.-num_comments, data = data_full)
 coefci(lm_lasso_ups, vcov = vcovHC(lm_lasso_ups, type = "HC2"))
 
-lm_lasso_comm <- lm(log(num_comments+1)~.-ups, data = data_full)
+lm_lasso_comm <- lm(num_comments~.-ups, data = data_full)
 coefci(lm_lasso_comm, vcov = vcovHC(lm_lasso_comm, type = "HC2"))
 
 # matched
-matched.cardnp = matched.cardnp %>%  mutate_at(c("gender","Jan_indic","Feb_indic",
+matched.cardglm = matched.cardglm %>%  mutate_at(c("gender","Jan_indic","Feb_indic",
                                                        "Mar_indic","Apr_indic",
                                 "May_indic","Jun_indic","Jul_indic","Aug_indic",
                                 "Sep_indic","Oct_indic","Nov_indic","Dec_indic"), as.numeric)
-x2 <- matrix(nrow = nrow(matched.cardnp), ncol = 71)
+x2 <- matrix(nrow = nrow(matched.cardglm), ncol = 71)
 for (i in 1:71){
-  x2[,i] = scale(matched.cardnp[,-c(46,73:77)][,i],scale = F)
+  x2[,i] = scale(matched.cardglm[,-c(46,73:77)][,i],scale = F)
 }
-x3 <- matched.cardnp$gender*x2
-colnames(x3) <- paste(colnames(matched.cardnp[,-c(46,73:77)]), "gender", sep=":")
-data_full = cbind(matched.cardnp[, !names(matched.cardnp) %in% c("distance","weights","subclass")] ,x3)
-lm_lasso_ups <- lm(log(ups+1)~.-num_comments, data = data_full)
+x3 <- matched.cardglm$gender*x2
+colnames(x3) <- paste(colnames(matched.cardglm[,-c(46,73:77)]), "gender", sep=":")
+data_full = cbind(matched.cardglm[, !names(matched.cardglm) %in% c("distance","weights","subclass")] ,x3)
+lm_lasso_ups <- lm(ups~.-num_comments, data = data_full)
 coefci(lm_lasso_ups, vcov = vcovHC(lm_lasso_ups, type = "HC2"))
 
-lm_lasso_comm <- lm(log(num_comments+1)~.-ups, data = data_full)
+lm_lasso_comm <- lm(num_comments~.-ups, data = data_full)
 coefci(lm_lasso_comm, vcov = vcovHC(lm_lasso_comm, type = "HC2"))
 
 ```
@@ -147,7 +147,7 @@ legend('topleft',legend=c("Female", "Male"),
        col=c("red", "blue"), lty=1, cex=0.8)
 
 # matched
-findex_m = which(matched.cardnp$gender == "1")
+findex_m = which(matched.cardglm$gender == "1")
 plot(density(ate_m_ups$nuis$pi_a1[findex_m]),col = "red",main = "PS Plot, Matched")
 lines(density(ate_m_ups$nuis$pi_a1[-c(findex_m)]),col = "blue")
 legend('topleft',legend=c("Female", "Male"),
